@@ -1,46 +1,75 @@
-※メモ
-
-dict.fromkeys(['name'])
-
-obj.get()
-
-obj.keys()
-
-json.dumps(obj)
-
-getinfo=zapi.host.update({"hostid":"10105","templates":[{"templateid":"10047"}]})
-
-getinfo=zapi.host.get({"filter":{"name":"pasca"}})[0]
-print getinfo["host"],getinfo["name"],getinfo["hostid"]
-
-------------------------------------------------------------------
+※
 
 #!/bin/sh
 
-IPADD=$1
+Insta_id="i-0c18d1c73ba7a2794"
 
-CMD(){
-
-expect -c "
-
-set timeout 3
-
-spawn ssh vyos@${IPADD}
-
-expect '(yes/no)?' ; send \"yes\n\"
-
-expect 'password:' ; send \"vyos\n\"
-
-expect '~$' ; send \"exit\n\"
-
-#expect
-
-#send
-
-#expect
-
-interact
-
-"
-
+get_int_id() {
+         insta_id=$1
+         getid=`aws ec2 \
+         describe-network-interfaces \
+         --filters Name=attachment.instance-id,Values=${insta_id} \
+         --output json | jq -r '.NetworkInterfaces[].NetworkInterfaceId'`
+         return getid
 }
+
+get_sg_id() {
+         insta_id=$1
+         getsgid=`aws ec2 \
+         describe-network-interfaces \
+         --filters Name=attachment.instance-id,Values=${insta_id} \
+         --output json | jq -r '.NetworkInterfaces[].Groups[].GroupId'`
+         return getsgid
+}
+
+sg_create=`aws ec2 \
+           create-security-group --group-name hms-operation \
+           --description "hms-operation" \
+           --vpc-id vpc-4ef1ef2b`
+
+#if [ 0 = $?]; then
+
+sg_adapt=`aws ec2 \
+          modify-network-interface-attribute \
+"AWS_getinfo.sh" 40L, 972C                                                                                                               1,1          先頭
+#!/bin/sh
+
+Insta_id="i-0c18d1c73ba7a2794"
+
+get_int_id() {
+         insta_id=$1
+         getid=`aws ec2 \
+         describe-network-interfaces \
+         --filters Name=attachment.instance-id,Values=${insta_id} \
+         --output json | jq -r '.NetworkInterfaces[].NetworkInterfaceId'`
+         return getid
+}
+
+get_sg_id() {
+         insta_id=$1
+         getsgid=`aws ec2 \
+         describe-network-interfaces \
+         --filters Name=attachment.instance-id,Values=${insta_id} \
+         --output json | jq -r '.NetworkInterfaces[].Groups[].GroupId'`
+         return getsgid
+}
+
+sg_create=`aws ec2 \
+           create-security-group --group-name hms-operation \
+           --description "hms-operation" \
+           --vpc-id vpc-4ef1ef2b`
+
+#if [ 0 = $?]; then
+
+sg_adapt=`aws ec2 \
+          modify-network-interface-attribute \
+          --network-interface-id get_int_id($Insta_id) \
+          --groups get_sg_id($Insta_id)`
+
+#  echo "OK"
+
+#else
+
+#  echo "NG"
+#fi
+
