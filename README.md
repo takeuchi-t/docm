@@ -1,5 +1,4 @@
 ※
-
 #!/bin/sh
 
 Insta_id="i-0c18d1c73ba7a2794"
@@ -72,4 +71,3 @@ sg_adapt=`aws ec2 \
 
 #  echo "NG"
 #fi
-
