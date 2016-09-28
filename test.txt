@@ -1,0 +1,179 @@
+﻿#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import sys, os, csv
+import time
+import json, urllib2
+import boto3
+from zbx_api import ZabbixAPI
+
+#----------------------------------------
+# Configure here.
+
+ZBX_USER = ''
+ZBX_PASS = ''
+ZBX_Server = 'http://10.152.64.7/zabbix' #zabbix server
+
+PSK_FILE='/etc/zabbix/.zbxenc-ag.psk'
+PSK_WORD='hue-admin-zabbix'
+
+#----------------------------------------
+
+def zabbix_login():
+    zapi = ZabbixAPI(ZBX_Server, use_digest_authenticate=True)
+    zapi.login(ZBX_USER, ZBX_PASS)
+    return zapi
+
+def aws_login():
+    ec2 = boto3.client('ec2',
+                    aws_access_key_id='',
+                    aws_secret_access_key='',
+                    region_name='' )
+    return ec2
+
+class aws_instance:
+
+      def __init__(self, ec2 ,instanceid):
+          self.__dict__["status"] = self.check_instance_status(ec2,instanceid)[0]
+          self.__dict__["statename"] = self.check_instance_status(ec2,instanceid)[1]
+
+      def check_instance_status(self, ec2, instanceid):
+          status = ec2.describe_instance_status(InstanceIds=instanceid)
+          stat = []
+          for lists in status["InstanceStatuses"]:
+              stat.append(lists["SystemStatus"]["Status"])
+              stat.append(lists["InstanceState"]["Name"])
+          return stat
+
+      def do_start(self, ec2, instanceid):
+          ec2.start_instances(InstanceIds=instanceid,
+                                   DryRun=True)
+
+      def do_stop(self, ec2, instanceid):
+          ec2.stop_instances(InstanceIds=instanceid,
+                                   DryRun=True)
+
+
+class zbx_host_information:
+
+    def __init__(self, zapi, host1):
+        host_info = zapi.host.get({"output":"extend",
+                                   "filter":{"host":[host1]} })
+        for items in host_info:
+            self.__dict__["name"] = items["name"]
+            self.__dict__["hostid"] = items["hostid"]
+            self.__dict__["tls_psk"] = items["tls_psk"]
+            self.__dict__["tls_psk_identity"] = items["tls_psk_identity"]
+            self.__dict__["proxy_hostid"] = items["proxy_hostid"]
+            self.__dict__["ip"] = self.find_main_interface(zapi, self.hostid)[0]
+            self.__dict__["port"] = self.find_main_interface(zapi, self.hostid)[1]
+            self.__dict__["select"] = []
+
+    def find_main_interface(self, zapi, hostid):
+        int_info = zapi.hostinterface.get({"output":"extend",
+                                           "hostids":hostid })
+        ips = []
+        for interface in int_info:
+            if interface["type"] == '1':
+               int_main = interface
+               ips.append(int_main["ip"])
+               ips.append(int_main["port"])
+        return ips
+
+#----------------------------------------
+
+def main():
+    argv_host = sys.argv[1]
+
+#-- search zbx host
+    zapi = zabbix_login()
+    host = zbx_host_information(zapi, argv_host)
+    #argv_proxy = "ip-10-52-64-5"
+    #proxy = host_information(zapi, argv_proxy)
+
+#-- search instance
+    ec2 = aws_login()
+    response = ec2.describe_instances(Filters=[{
+                                      'Name': 'private-ip-address',
+                                    'Values': [host.ip]
+                                              }])
+                                              
+    for data in response["Reservations"]:
+        lists = data["Instances"]
+        for resp in lists:
+            aws_instanceid = resp["InstanceId"],
+            aws_name = dict([(tag['Key'], tag['Value']) for tag in resp["Tags"]])["Name"]
+    instance = aws_instance(ec2, aws_instanceid)
+
+
+#-- instance name check 
+#   if aws_name is not match host.name, abort this script.
+    if aws_name == host.select:
+    
+    #-- instance stop 
+       n = 0
+       while n =< 4
+             if instance.statename == "running":
+                print "trying instance stop..."
+                instance.do_stop
+                
+              elif instance.statename == "terminated":
+                   print "instance state_name is terminated. so stop instance_reboot..."
+                   sys.exit()
+              else:
+                   print "instance was already not running..."
+                   break
+       time.sleep(60)
+       n+=1
+       
+       if instance.statename == "running":
+          print "instance cannot stop..."
+          sys.exit()
+
+
+    #-- wait for 2min
+       time.sleep(120)
+
+
+    #-- instance start 
+       n = 0
+       while n =< 4
+             while instance.status != "ok":
+             
+                   if instance.statename <> "running":
+                      instance.do_start
+                      print "trying instance start..."
+                  
+                   else:
+                      print "instance is running, but status is not OK."
+                      break
+             time.sleep(60)
+             n+=1
+             
+       if n == 4
+          print "try booting to instance at 3 times, but status is not OK."
+
+
+    #-- wait for 2min
+       time.sleep(120)
+       
+
+    #-- check instance status 
+       if instance.status != "ok":
+          print "instance is restarted."
+          
+       else
+          print "instance is not restarted."
+          sys.exit()
+    
+
+#-- instance name check --else--
+    else:
+         print "Hostname is not match, so stop this script..."
+         sys.exit()
+
+
+#----------------------------------------
+
+if __name__ == '__main__':
+    main()
