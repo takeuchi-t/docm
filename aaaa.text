@@ -1,0 +1,99 @@
+﻿#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import boto3
+#-------
+
+class cInstance:
+    def __init__(self,instanceid, keyname, privatednsname, privateipaddress, tags):
+        self.instanceid = instanceid
+        self.keyname = keyname
+        self.privatednsname = privatednsname
+        self.privateipaddress = privateipaddress
+        self.tags = tags
+
+
+def select_server_type():
+
+        dicts = {}
+        dicts["cassandra-data-viewer"] = "cassandra-dataviwer",
+        dicts["cassandra"] = "cassandra",
+        dicts["cloudera-manager"] = "cloudera-manager",
+        dicts["cloudera-node"] = "cloudera-node",
+        dicts["cloudera-"] = "edp2",
+        dicts["elasticsearch"] = "elasticsearch",
+        dicts["git-docker-config"] = "gitconfig",
+        dicts["hue-interface"] = "interface",
+        dicts["kafka"] = "kafka",
+        dicts["kubernetes"] = "kubernetes",
+        dicts["mailman"] = "mailman",
+        dicts["ntp"] = "ntp",
+        dicts["redis-master"] = "redis-master",
+        dicts["redis-slave"] = "redis-slave",
+        dicts["redis-master"] = "redis-master",
+        dicts["redis-sentinel"] = "redis-sentinel",
+        dicts["smtp"] = "smtp",
+        dicts["zookeeper"] = "zookeeper",
+
+        # conv
+        dicts["CAB"] = "conv-cab",
+        dicts["CJK-AP"] = "conv-cjk-ap",
+        dicts["CJK-BS"] = "conv-cjk-bs",
+        dicts["CWS-AP"] = "conv-cws-ap",
+        dicts["CWS-BS"] = "conv-cws-bs",
+        dicts["CTM-AP"] = "conv-ctm-ap",
+        dicts["CTM-BS"] = "conv-ctm-bs",
+        dicts["DB"] = "conv-db",
+        dicts["NFS"] = "conv-nfs",
+        dicts["DATASYNC"] = "conv-datasync",
+        dicts["IFX-AP"] = "conv-ifx",
+       #dicts["other"] =""
+
+        return dicts
+
+# -----------------------------------------------------
+
+if __name__ == '__main__':
+
+    ec2 = boto3.client('ec2',
+                    aws_access_key_id='
+                    aws_secret_access_key='
+                    region_name='ap-northeast-1')
+
+    response = ec2.describe_instances(Filters=[{
+                                      'Name': 'vpc-id',
+                                    'Values': [
+                                           'vpc-7adfc51f',
+                                              ]
+                                          }]
+                                  )
+
+    for data in response["Reservations"]:
+        lists = data["Instances"]
+
+        for resp in lists:
+            Instance = cInstance(
+                                 instanceid=resp["InstanceId"],
+                                 keyname=resp["KeyName"],
+                                 privatednsname=resp["PrivateDnsName"],
+                                 privateipaddress=resp["PrivateIpAddress"],
+                                 tags= dict([(tag['Key'], tag['Value']) for tag in resp["Tags"]])["N
+ame"]
+                                 )
+
+
+
+cw = boto3.client('cloudwatch',
+                    aws_access_key_id='
+                    aws_secret_access_key='
+                    region_name='ap-northeast-1')
+
+metricslist = cw.list_metrics(
+                             Namespace  = 'AWS/EC2',
+                             Dimensions = [{
+                             'Name'  : 'InstanceId',
+                             'Value' : 'i-508080cf',
+                             }],
+                             )
+
+print metricslist
